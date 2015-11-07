@@ -43,68 +43,81 @@ public:
     }
 
 private:
-    auto execute_command( std::vector< Command> cmds, size_t inst_ptr, std::stack< int >& loop_stack ) -> int {
+    auto execute_command( std::vector< Command > cmds, size_t inst_ptr, std::stack< int >& loop_stack ) -> size_t {
         assert( data_ptr >= 0 && data_ptr < DATA_BUFFER_SIZE );
         assert( inst_ptr >= 0 && inst_ptr < cmds.size() );
 
         auto cmd = cmds[ inst_ptr ];
 
         switch( cmd ) {
-        case Command::Forward: {
-            ++data_ptr;
-            break;
-        }
+            case Command::Forward: {
+                ++data_ptr;
+                return inst_ptr + 1;
+            }
 
-        case Command::Backward: {
-            --data_ptr;
-            break;
-        }
+            case Command::Backward: {
+                --data_ptr;
+                return inst_ptr + 1;
+            }
 
-        case Command::Inc: {
-            ++data_buffer[ data_ptr ];
-            break;
-        }
+            case Command::Inc: {
+                ++data_buffer[ data_ptr ];
+                return inst_ptr + 1;
+            }
 
-        case Command::Dec: {
-            --data_buffer[ data_ptr ];
-            break;
-        }
+            case Command::Dec: {
+                --data_buffer[ data_ptr ];
+                return inst_ptr + 1;
+            }
 
-        case Command::Print: {
-            print( data_buffer[ data_ptr ] );
-            break;
-        }
+            case Command::Print: {
+                print( data_buffer[ data_ptr ] );
+                return inst_ptr + 1;
+            }
 
-        case Command::Read: {
-            read( data_buffer[ data_ptr ] );
-            break;
-        }
+            case Command::Read: {
+                read( data_buffer[ data_ptr ] );
+                return inst_ptr + 1;
+            }
 
-        case Command::LoopBegin: {
-            loop_stack.push( inst_ptr );
-            break;
-        }
+            case Command::LoopBegin: {
+                loop_stack.push( inst_ptr );
+                return inst_ptr + 1;
+            }
 
-        case Command::LoopEnd: {
-            int loop_beg = loop_stack.top();
-            loop_stack.pop();
+            case Command::LoopEnd: {
+                if ( 0 == data_buffer[ data_ptr ] ) {
+                    loop_stack.pop();
+                    return inst_ptr + 1;
 
-            return loop_beg + 1;
-        }
+                } else {
+                    int loop_beg = loop_stack.top();
+                    return loop_beg + 1;
+                }
+            }
 
-        default:
-            break;
-        }
-
-        return inst_ptr + 1;
-    }
+            default: {
+                std::cerr << "Unknown command is found: " << static_cast< int> ( cmd ) << std::endl;
+                std::abort();
+                return 0; // to suppress error.
+            }
+        } // switch
+    } // execute_command
 
     auto print ( unsigned char c ) -> void {
+#ifdef DEBUG_LOG
+        std::cout << "print: " << static_cast< int >( c ) << std::endl;
+#endif
+
         out_device << c;
     }
 
     auto read ( unsigned char& c ) -> void {
         in_device >> c;
+
+#ifdef DEBUG_LOG
+        std::cout << "readed: " << static_cast< int >( c ) << std::endl;
+#endif
     }
 
     static constexpr auto DATA_BUFFER_SIZE = 4096;
@@ -117,7 +130,54 @@ private:
 };
 
 auto parse( const std::string& command_str) -> std::vector< Command > {
-    auto commands = std::vector< Command > ();
+    auto commands = std::vector< Command >();
+
+    for( auto c : command_str ) {
+        switch( c ) {
+            case '>': {
+                commands.push_back( Command::Forward );
+                break;
+            }
+
+            case '<': {
+                commands.push_back( Command::Backward );
+                break;
+            }
+
+            case '+': {
+                commands.push_back( Command::Inc );
+                break;
+            }
+
+            case '-': {
+                commands.push_back( Command::Dec );
+                break;
+            }
+
+            case '.': {
+                commands.push_back( Command::Print );
+                break;
+            }
+
+            case ',': {
+                commands.push_back( Command::Read );
+                break;
+            }
+
+            case '[': {
+                commands.push_back( Command::LoopBegin );
+                break;
+            }
+
+            case ']': {
+                commands.push_back( Command::LoopEnd );
+                break;
+            }
+
+            default:
+                continue;
+        }
+    }
 
     return commands;
 }

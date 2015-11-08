@@ -12,6 +12,7 @@ Just want to get my brain fxxked like many people did.
 Out-of-source-directory build is recommanded.
 
 ex.
+
 1. mkdir build && cd build
 1. cmake ../brainfuck
 1. make

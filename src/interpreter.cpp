@@ -2,33 +2,15 @@
 #include <fstream>
 
 #include <string>
-#include <vector>
-#include <stack>
 #include <array>
-#include <map>
 
 #include <cassert>
 #include <cstdlib>
 
-enum class Command {
-    Forward,
-    Backward,
-    Inc,
-    Dec,
-    Print,
-    Read,
-    LoopBegin,
-    LoopEnd
-};
-
-struct Program {
-    Program( std::vector< Command > cmds, std::map< size_t, size_t > loop_scopes ) :
-        cmds( cmds ),
-        loop_scopes( loop_scopes ) {}
-
-    std::vector< Command > cmds;
-    std::map< size_t, size_t > loop_scopes;
-};
+#include "Command.h"
+#include "Program.h"
+#include "parse.h"
+#include "utils.h"
 
 class Environment {
 public:
@@ -144,84 +126,6 @@ private:
     std::istream& in_device;
     std::ostream& out_device;
 };
-
-auto parse( const std::string& command_str ) -> Program {
-    auto commands = std::vector< Command >();
-    auto loop_scopes = std::map< size_t, size_t >();
-    auto loop_stack  = std::stack< size_t >();
-
-    for( auto c : command_str ) {
-        switch( c ) {
-            case '>': {
-                commands.push_back( Command::Forward );
-                break;
-            }
-
-            case '<': {
-                commands.push_back( Command::Backward );
-                break;
-            }
-
-            case '+': {
-                commands.push_back( Command::Inc );
-                break;
-            }
-
-            case '-': {
-                commands.push_back( Command::Dec );
-                break;
-            }
-
-            case '.': {
-                commands.push_back( Command::Print );
-                break;
-            }
-
-            case ',': {
-                commands.push_back( Command::Read );
-                break;
-            }
-
-            case '[': {
-                commands.push_back( Command::LoopBegin );
-                loop_stack.push( commands.size() - 1 );
-
-                break;
-            }
-
-            case ']': {
-                commands.push_back( Command::LoopEnd );
-
-                auto loop_beg_idx = loop_stack.top();
-                auto cur_cmd_idx  = commands.size() - 1;
-
-                loop_scopes[ cur_cmd_idx  ] = loop_beg_idx;
-                loop_scopes[ loop_beg_idx ] = cur_cmd_idx;
-
-                loop_stack.pop();
-
-                break;
-            }
-
-            default:
-                continue;
-        }
-    }
-
-    return Program( commands, loop_scopes );
-}
-
-// TODO: could make use of streaming to reduce memory footprint
-auto read_source( std::ifstream& src ) -> std::string {
-    std::string content;
-    std::string buffer;
-
-    while( std::getline( src, buffer ) ) {
-        content += buffer;
-    }
-
-    return content;
-}
 
 int main( int argc, char* argv[] ) {
     if ( argc < 2 ) {
